@@ -147,15 +147,19 @@ sgstar <- function(data,w,p,ps,s){
   fit <- summary(GSTARfit)
   fittedvalue <- GSTARfit$fitted
 
-  Coefficient<-as.data.frame(GSTARfit$coefficients)
+  Coefficient<-GSTARfit$coefficients
 
   MSE<-sum((GSTARfit$residuals)^2)/(n*k-ps*s*k)
   RMSE <- sqrt(MSE)
-  AIC<-AIC(GSTARfit)
+
+  param <- length(GSTARfit$coefficients)/k
 
   SSE <- sum((GSTARfit$residuals)^2)
   SST <- sum((ZT - (sum(ZT)/length(ZT)))^2)
 
+  obs <- length(GSTARfit$residuals)
+
+  AIC <- exp(param/obs)*SSE/obs
   R2 <- 1-SSE/SST
 
   Performance<-data.frame(MSE=MSE, RMSE=RMSE,AIC=AIC, Rsquare=R2)
