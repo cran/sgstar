@@ -32,6 +32,7 @@
 #' predict.fit <-predict_sgstar(fit,12)
 
 
+
 predict_sgstar<- function(formula, n_time){
   c<- n_time
   n <- nrow(formula$data)
@@ -121,7 +122,7 @@ predict_sgstar<- function(formula, n_time){
     Xpred <- data.frame(MApred,MAWpred,MSpred,MSWpred)
     Xpred <- as.matrix(Xpred)
     #sum(is.na(Xpred))
-    coef <- as.matrix(formula$Coefficient)
+    coef <- as.matrix(formula$Coefficient[,1])
     ypred <- Xpred%*%coef
     zt[(n*k+1):(n*k+c*k)] <- as.vector(ypred)
 

@@ -44,7 +44,6 @@ plot_sgstar <- function(formula){
   colnames(z) <- colnames(formula$data)
 
 
-
   fit <- rbind(z,formula$Fitted.values,z_pred)
   colnames(fit) <- paste(colnames(fit),"fit",sep = ".")
 
@@ -71,3 +70,4 @@ plot_sgstar <- function(formula){
   }
   return(plot <- plott)
 }
+

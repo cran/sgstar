@@ -1,9 +1,9 @@
-1ea1be3995912ed433e576240533a3b9 *DESCRIPTION
-0a1dd645baf2574161cc0d2172318487 *NAMESPACE
+47c4aba96ac43ce3072597b9a4a1c6e9 *DESCRIPTION
+9ff6f3746fa8f483def6397e5360a40d *NAMESPACE
 9c8570f22e4fe346af5a972b7bd16164 *R/coords.R
-f513031ee1d5dc42a345239ea9f2cd1b *R/plot_sgstar.R
-e9d0faf76d0f7fe3e79b8af5b3e78a15 *R/predict_sgstar.R
-8c4da9b6c3656718387d65ac7deee383 *R/sgstar.R
+49ac3ebd18542554b3f784685d8d6b0b *R/plot_sgstar.R
+9a7d12bb73bd54d302d2126c6ccfd891 *R/predict_sgstar.R
+e7dcfe2a74e89693e2214186d9e3c766 *R/sgstar.R
 d407325b964e42c6dfe3c5dc923cbecb *R/simulatedata.R
 ecef40846c78f75cd05e244034daebcf *README.md
 e96c70775cba5cf479359a025c8d9562 *data/coords.rda

@@ -29,7 +29,8 @@
 #'
 #' @export
 #' @importFrom utils stack
-#' @importFrom nlme gls
+#' @importFrom stats lm
+#' @importFrom stats cov
 #'
 #' @examples
 #' library(sgstar)
@@ -54,7 +55,6 @@
 #'
 #'
 #'
-
 sgstar <- function(data,w,p,ps,s){
 
   y <- data
@@ -103,7 +103,7 @@ sgstar <- function(data,w,p,ps,s){
   colnamesMA <- c(rep("",p*k))
   for ( i in 1:p ){
     for(j in 1:k ){
-      colnamesMA[(i-1)*k+j] <- paste("psi",i,"0","(",space[j],")",sep ="")
+      colnamesMA[(i-1)*k+j] <- paste("psi",i,"0",".",space[j],sep ="")
     }
   }
   colnames(MA) <- colnamesMA
@@ -112,7 +112,7 @@ sgstar <- function(data,w,p,ps,s){
   colnamesMAW <- c(rep("",p*k))
   for ( i in 1:p ){
     for(j in 1:k ){
-      colnamesMAW[(i-1)*k+j] <- paste("psi",i,"1","(",space[j],")",sep ="")
+      colnamesMAW[(i-1)*k+j] <- paste("psi",i,"1",".",space[j],sep ="")
     }
   }
   colnames(MAW) <- colnamesMAW
@@ -121,7 +121,7 @@ sgstar <- function(data,w,p,ps,s){
   colnamesMS <- c(rep("",ps*k))
   for ( i in 1:ps ){
     for(j in 1:k ){
-      colnamesMS[(i-1)*k+j] <- paste("psi",i,"0","(",s,")","(",space[j],")",sep ="")
+      colnamesMS[(i-1)*k+j] <- paste("psi",i,"0",".",s,".",space[j],sep ="")
     }
   }
   colnames(MS) <- colnamesMS
@@ -130,7 +130,7 @@ sgstar <- function(data,w,p,ps,s){
   colnamesMSW <- c(rep("",ps*k))
   for ( i in 1:ps ){
     for(j in 1:k ){
-      colnamesMSW[(i-1)*k+j] <- paste("psi",i,"1","(",s,")","(",space[j],")",sep ="")
+      colnamesMSW[(i-1)*k+j] <- paste("psi",i,"1",".",s,".",space[j],sep ="")
     }
   }
   colnames(MSW) <- colnamesMSW
@@ -142,35 +142,74 @@ sgstar <- function(data,w,p,ps,s){
   WXST <- MSW
   GSTAR<-data.frame(ZT,XT,WXT,XST,WXST)
 
+  fitlm <- lm(ZT~.-1,data=GSTAR)
+  residlm <-matrix(fitlm$residuals,ncol = k,byrow=T)
 
-  GSTARfit <- gls(ZT~.-1,data=GSTAR)
-  fit <- summary(GSTARfit)
-  fittedvalue <- GSTARfit$fitted
+  varcov <- cov(residlm)
+  #varcov <- sqrt(varcov)
 
-  Coefficient<-GSTARfit$coefficients
+  mat.I <- diag(nrow(residlm))
+  sigma <- kronecker(mat.I,varcov)
 
-  MSE<-sum((GSTARfit$residuals)^2)/(n*k-ps*s*k)
-  RMSE <- sqrt(MSE)
+  Y <- as.matrix(GSTAR$ZT)
+  X <- as.matrix(GSTAR[,-1])
+  sigma_inv <- solve(sigma)
+  XTX_inv <- solve(t(X) %*% sigma_inv %*% X)
+  betahat <- XTX_inv %*% t(X) %*% sigma_inv %*% Y
 
-  param <- length(GSTARfit$coefficients)/k
+  sd_betahat <- sqrt(diag(XTX_inv))
 
-  SSE <- sum((GSTARfit$residuals)^2)
-  SST <- sum((ZT - (sum(ZT)/length(ZT)))^2)
+  Yhat <- X%*%betahat
+  ehat <- Y - Yhat
+  param <- length(betahat)/k
 
-  obs <- length(GSTARfit$residuals)
+  ehat_ <- as.data.frame(matrix(ehat,ncol = k, byrow = T))
+  Yhat_ <- as.data.frame(matrix(Yhat,ncol = k, byrow = T))
+  Y_    <- as.data.frame(matrix(Y,   ncol = k, byrow = T))
 
-  AIC <- exp(param/obs)*SSE/obs
-  R2 <- 1-SSE/SST
+  MSE <- vector(length = ncol(ehat_))
+  RMSE <- vector(length = ncol(ehat_))
+  AIC <- vector(length = ncol(ehat_))
+  R2 <- vector(length = ncol(ehat_))
+  temp_SSE <- vector(length = ncol(ehat_))
+  temp_SST <- vector(length = ncol(ehat_))
+  for(i in 1:ncol(ehat_)){
+    temp_et <- ehat_[,i]
+    temp_SSE[i] <- sum(temp_et^2)
+    temp_SST[i] <- sum(  (Y_[,i] - mean(Y_[,i]))^2 )
+    MSE[i] <- temp_SSE[i]/length(temp_et)
+    RMSE[i] <- sqrt(MSE[i])
+    R2[i] <- 1-(temp_SSE[i]/temp_SST[i])
+    obs <- length(temp_et)
+    AIC[i] <- exp(param/obs)*temp_SSE[i]/obs
+  }
+  SSE_total <- sum(temp_SSE)
+  MSE_total <- SSE_total/(length(ehat))
+  RMSE_total <- sqrt(MSE_total)
+  SST_total <- sum(temp_SST)
+  R2_total <- 1-(SSE_total/SST_total)
 
-  Performance<-data.frame(MSE=MSE, RMSE=RMSE,AIC=AIC, Rsquare=R2)
-  Zt<-as.data.frame(matrix(ZT,n-ps*s,k,byrow=T))
+
+  AIC_total <- (exp(param/obs))*(SSE_total/length(ehat))
+
+  coef <- matrix(c(betahat,sd_betahat),ncol = 2)
+  row.names(coef) <- row.names(betahat)
+  colnames(coef) <- c("Coefficients","sd")
+
+
+  Performance_space<-data.frame(MSE=MSE, RMSE=RMSE,AIC=AIC, Rsquare=R2)
+  Performance_total <- data.frame(MSE=MSE_total,RMSE = RMSE_total,AIC=AIC_total,Rsquare=R2_total)
+
+  Performance <- rbind(Performance_space,Performance_total)
+  rownames(Performance) <- c(space,"total")
+  Zt<-as.data.frame(matrix(Y,k,byrow=T))
   colnames(Zt) <- space
-  Zhat1<-as.data.frame(matrix(fittedvalue,ncol = k,byrow = T))
-  colnames(Zhat1) <- space
-  Residual<-as.data.frame(matrix(GSTARfit$residuals,(n-ps*s),k,byrow = T))
+  Zhat<-Yhat_
+  colnames(Zhat) <- space
+  Residual<-ehat_
   colnames(Residual) <- space
 
 
-  hasil <- list(Coefficients = Coefficient, Fitted.values= Zhat1, Residual = Residual, Performance = Performance, p = p , ps = ps , s = s, data=y, weight = w )
+  hasil <- list(Coefficients = coef, Fitted.values= Zhat, Residual = Residual, Performance = Performance, p = p , ps = ps , s = s, data=y, weight = w )
   return(hasil)
 }
